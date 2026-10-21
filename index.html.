@@ -1,0 +1,153 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEXUS TERMINAL</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#050907;color:#00ff88;font-family:monospace}
+header{padding:25px 15px;text-align:center;border-bottom:1px solid #00ff88}
+h1{font-size:clamp(26px,7vw,42px);text-shadow:0 0 15px #00ff88}
+main{max-width:700px;margin:auto;padding:16px}
+.card{border:1px solid #087a4a;border-radius:10px;padding:16px;margin:14px 0;background:#09130e}
+h2{font-size:18px}
+input,textarea,button{font:inherit;padding:12px;border-radius:6px;width:100%;margin:5px 0}
+input,textarea{background:#030604;color:#00ff88;border:1px solid #087a4a}
+button{background:#003c25;color:#00ff88;border:1px solid #00ff88;cursor:pointer}
+button:active{background:#087a4a}
+.result{overflow-wrap:anywhere;white-space:pre-wrap}
+footer{text-align:center;padding:20px;color:#529b76}
+</style>
+</head>
+<body>
+<header>
+<h1>NEXUS TERMINAL</h1>
+<p>WEB SYSTEM // VERSION 1.0</p>
+<p id="clock"></p>
+</header>
+<main>
+<section class="card">
+<h2>[ 01 ] КАЛЬКУЛЯТОР</h2>
+<input id="expression" placeholder="Например: (25 + 5) * 2">
+<button onclick="calculate()">Вычислить</button>
+<p id="calcResult" class="result"></p>
+</section>
+
+<section class="card">
+<h2>[ 02 ] ГЕНЕРАТОР ПАРОЛЕЙ</h2>
+<input id="length" type="number" min="4" max="128" value="16">
+<button onclick="makePassword()">Создать пароль</button>
+<p id="password" class="result"></p>
+<button onclick="copyText('password')">Копировать пароль</button>
+</section>
+
+<section class="card">
+<h2>[ 03 ] ШИФР ЦЕЗАРЯ</h2>
+<textarea id="plain" placeholder="Введи текст"></textarea>
+<input id="shift" type="number" value="3" placeholder="Сдвиг">
+<button onclick="cipher()">Зашифровать / расшифровать</button>
+<p id="cipherResult" class="result"></p>
+</section>
+
+<section class="card">
+<h2>[ 04 ] ЛИЧНЫЕ ЗАМЕТКИ</h2>
+<textarea id="note" placeholder="Твои заметки"></textarea>
+<button onclick="saveNote()">Сохранить заметки</button>
+<p id="noteStatus"></p>
+</section>
+
+<section class="card">
+<h2>[ 05 ] ИНФОРМАЦИЯ</h2>
+<p id="system"></p>
+<button onclick="showSystem()">Проверить браузер</button>
+</section>
+</main>
+<footer>NEXUS TERMINAL © 2026</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function tick(){
+  $("clock").textContent = new Date().toLocaleString("ru-RU");
+}
+tick();
+setInterval(tick,1000);
+
+function calculate(){
+  const s=$("expression").value.trim();
+  if(!s || !/^[\d\s()+\-*/%.]+$/.test(s)){
+    $("calcResult").textContent="Ошибка: проверь выражение";
+    return;
+  }
+  try{
+    const result=Function('"use strict";return ('+s+')')();
+    $("calcResult").textContent=
+      typeof result==="number" && Number.isFinite(result)
+      ? String(result) : "Некорректный результат";
+  }catch{
+    $("calcResult").textContent="Некорректное выражение";
+  }
+}
+
+function makePassword(){
+  const n=Number($("length").value);
+  if(!Number.isInteger(n)||n<4||n>128){
+    $("password").textContent="Выбери длину от 4 до 128";
+    return;
+  }
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*?";
+  const bytes=new Uint32Array(n);
+  crypto.getRandomValues(bytes);
+  $("password").textContent=
+    Array.from(bytes,b=>chars[b%chars.length]).join("");
+}
+
+function cipher(){
+  const text=$("plain").value;
+  const shift=Number($("shift").value);
+  if(!Number.isInteger(shift)){
+    $("cipherResult").textContent="Сдвиг должен быть целым числом";
+    return;
+  }
+  const alphabets=[
+    "abcdefghijklmnopqrstuvwxyz",
+    "абвгдеёжзийклмнопрстуфхцчшщъыьэюя"
+  ];
+  $("cipherResult").textContent=Array.from(text,ch=>{
+    const low=ch.toLowerCase();
+    const a=alphabets.find(x=>x.includes(low));
+    if(!a)return ch;
+    const result=a[(a.indexOf(low)+shift%a.length+a.length)%a.length];
+    return ch===ch.toUpperCase()&&ch!==ch.toLowerCase()
+      ? result.toUpperCase():result;
+  }).join("");
+}
+
+function saveNote(){
+  localStorage.setItem("nexus-note",$("note").value);
+  $("noteStatus").textContent="Заметки сохранены в этом браузере.";
+}
+$("note").value=localStorage.getItem("nexus-note")||"";
+
+function showSystem(){
+  $("system").textContent=
+    "Браузер: "+navigator.userAgent+
+    "\nПлатформа: "+navigator.platform+
+    "\nЯзык: "+navigator.language;
+}
+
+async function copyText(id){
+  const text=$(id).textContent;
+  if(!text)return;
+  try{
+    await navigator.clipboard.writeText(text);
+    alert("Скопировано!");
+  }catch{
+    alert("Копирование недоступно. Выдели текст вручную.");
+  }
+}
+</script>
+</body>
+</html>
